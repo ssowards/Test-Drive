@@ -16,7 +16,8 @@ class Robot: public SampleRobot
 
 	RobotDrive robotDrive;	// robot drive system
 	Joystick stick;			// only joystick
-	Gyro gyro;				//gyro
+	Gyro gyro1;				//gyro 1
+	Gyro gyro2;				//gyro 2
 	BuiltInAccelerometer accel;   //built in accelerometer
 	AnalogPotentiometer pot; //potentiometer
 	DigitalInput limitSwitch; //limit switch
@@ -26,7 +27,8 @@ public:
 			robotDrive(frontLeftChannel, rearLeftChannel,
 					   frontRightChannel, rearRightChannel),	// these must be initialized in the same order
 			stick(joystickChannel),								// as they are declared above.
-			gyro(0),
+			gyro1(0),
+			gyro2(1),
 			accel(),
 			pot(3, 10, 0),
 			limitSwitch(0)
@@ -41,32 +43,45 @@ public:
 	 */
 	void OperatorControl()
 	{
-		float angle;
+		float angle1, angle2, angle, xAxis, yAxis, zAxis, joy_atten;
 		double x, y, z, rotation;
 		bool lSwitch;
 
-		gyro.Reset();
-		gyro.SetDeadband(0.005);
+		joy_atten = 0.5;
+		gyro1.Reset();
+		gyro2.Reset();
+		gyro1.SetDeadband(0.005);
+		gyro2.SetDeadband(0.005);
 		robotDrive.SetSafetyEnabled(false);
 
 		while (IsOperatorControl() && IsEnabled())
 		{
-			angle = gyro.GetAngle();
+			angle1 = gyro1.GetAngle();
+			angle2 = gyro2.GetAngle();
+			angle = (angle1 + angle2) / 2;
 			x = accel.GetX();
 			y = accel.GetY();
 			z = accel.GetZ();
+			xAxis = stick.GetX() * joy_atten;
+			yAxis = stick.GetY() * joy_atten;
+			zAxis = (-1*stick.GetZ()) * joy_atten;
 			rotation = pot.Get();
 			lSwitch = limitSwitch.Get();
 
         	// Use the joystick X axis for lateral movement, Y axis for forward movement, and Z axis for rotation.
         	// This sample does not use field-oriented drive, so the gyro input is set to zero.
-			robotDrive.MecanumDrive_Cartesian(stick.GetX(), stick.GetY(), stick.GetZ(), angle);
-			SmartDashboard::PutNumber("Gyro ", angle);
+			robotDrive.MecanumDrive_Cartesian(xAxis, yAxis, zAxis, angle);
+			SmartDashboard::PutNumber("Gyro1 ", angle1);
+			SmartDashboard::PutNumber("Gyro2 ", angle2);
+			SmartDashboard::PutNumber("Gyro Avg. ", angle);
 			SmartDashboard::PutNumber("Accelerometer X ", x);
 			SmartDashboard::PutNumber("Accelerometer Y ", y);
 			SmartDashboard::PutNumber("Accelerometer Z ", z);
 			SmartDashboard::PutNumber("Potentiometer ", rotation);
 			SmartDashboard::PutBoolean("Limit Switch ", lSwitch);
+			SmartDashboard::PutNumber("X axis", xAxis);
+			SmartDashboard::PutNumber("Y axis", yAxis);
+			SmartDashboard::PutNumber("Z axis", zAxis);
 			Wait(0.005); // wait 5ms to avoid hogging CPU cycles
 		}
 	}
