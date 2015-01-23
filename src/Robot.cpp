@@ -34,8 +34,8 @@ public:
 			limitSwitch(0)
 	{
 		robotDrive.SetExpiration(0.1);
-		robotDrive.SetInvertedMotor(RobotDrive::kFrontLeftMotor, true);	// invert the left side motors
-		robotDrive.SetInvertedMotor(RobotDrive::kRearLeftMotor, true);	// you may need to change or remove this to match your robot
+		robotDrive.SetInvertedMotor(RobotDrive::kFrontRightMotor, true);	// invert the left side motors
+		robotDrive.SetInvertedMotor(RobotDrive::kRearRightMotor, true);	// you may need to change or remove this to match your robot
 	}
 
 	/*
@@ -65,7 +65,7 @@ public:
 			z = accel.GetZ();
 			xAxis = stick.GetX() * joy_atten;
 			yAxis = stick.GetY() * joy_atten;
-			zAxis = (-1*stick.GetZ()) * joy_atten;
+			zAxis = stick.GetZ() * joy_atten;
 			rotation = pot.Get();
 			lSwitch = limitSwitch.Get();
 			antinitrus = stick.GetRawButton(8);
@@ -76,11 +76,12 @@ public:
 				joy_atten = 0.5;
 				xAxis = stick.GetX() * joy_atten;
 				yAxis = stick.GetY() * joy_atten;
-				zAxis = (-1*stick.GetZ()) * joy_atten;
+				zAxis = stick.GetZ() * joy_atten;
 
 				robotDrive.MecanumDrive_Cartesian(xAxis, yAxis, zAxis, angle);
 			}
-			else joy_atten = 1;
+			else
+				joy_atten = 1;
 
         	// Use the joystick X axis for lateral movement, Y axis for forward movement, and Z axis for rotation.
         	// This sample does not use field-oriented drive, so the gyro input is set to zero.
