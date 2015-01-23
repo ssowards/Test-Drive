@@ -14,13 +14,13 @@ class Robot: public SampleRobot
 
     const static int joystickChannel	= 0;
 
-	RobotDrive robotDrive;	// robot drive system
-	Joystick stick;			// only joystick
-	Gyro gyro1;				//gyro 1
-	Gyro gyro2;				//gyro 2
-	BuiltInAccelerometer accel;   //built in accelerometer
-	AnalogPotentiometer pot; //potentiometer
-	DigitalInput limitSwitch; //limit switch
+	RobotDrive robotDrive;			// robot drive system
+	Joystick stick;					// only joystick
+	Gyro gyro1;						//gyro 1
+	Gyro gyro2;						//gyro 2
+	BuiltInAccelerometer accel;   	//built in accelerometer
+	AnalogPotentiometer pot; 		//potentiometer
+	DigitalInput limitSwitch; 		//limit switch
 
 public:
 	Robot() :
@@ -38,16 +38,17 @@ public:
 		robotDrive.SetInvertedMotor(RobotDrive::kRearLeftMotor, true);	// you may need to change or remove this to match your robot
 	}
 
-	/**
+	/*
 	 * Runs the motors with Mecanum drive.
 	 */
 	void OperatorControl()
 	{
-		float angle1, angle2, angle, xAxis, yAxis, zAxis, joy_atten;
+		float angle1, angle2, angle, xAxis, yAxis, zAxis;
+		float joy_atten;
 		double x, y, z, rotation;
 		bool lSwitch;
+		bool antinitrus;
 
-		joy_atten = 0.5;
 		gyro1.Reset();
 		gyro2.Reset();
 		gyro1.SetDeadband(0.005);
@@ -67,6 +68,19 @@ public:
 			zAxis = (-1*stick.GetZ()) * joy_atten;
 			rotation = pot.Get();
 			lSwitch = limitSwitch.Get();
+			antinitrus = stick.GetRawButton(8);
+
+			if (antinitrus == true)
+			{
+				//Sets speed to 0.5 power while holding button
+				joy_atten = 0.5;
+				xAxis = stick.GetX() * joy_atten;
+				yAxis = stick.GetY() * joy_atten;
+				zAxis = (-1*stick.GetZ()) * joy_atten;
+
+				robotDrive.MecanumDrive_Cartesian(xAxis, yAxis, zAxis, angle);
+			}
+			else joy_atten = 1;
 
         	// Use the joystick X axis for lateral movement, Y axis for forward movement, and Z axis for rotation.
         	// This sample does not use field-oriented drive, so the gyro input is set to zero.
