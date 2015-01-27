@@ -12,15 +12,23 @@ class Robot: public SampleRobot
     const static int frontRightChannel	= 1;
     const static int rearRightChannel	= 0;
 
+    const static int elevatorChannel = 4;
+    const static int elevatorPotChannel = 3;
+
     const static int joystickChannel	= 0;
+
+    const static int encoderChannelA = 0;
+    const static int encoderChannelB = 1;
 
 	RobotDrive robotDrive;			// robot drive system
 	Joystick stick;					// only joystick
 	Gyro gyro1;						//gyro 1
-	Gyro gyro2;						//gyro 2
 	BuiltInAccelerometer accel;   	//built in accelerometer
-	AnalogPotentiometer pot; 		//potentiometer
+	AnalogPotentiometer elevatorPot; 		//potentiometer
 	DigitalInput limitSwitch; 		//limit switch
+	Talon elevator;
+	Encoder encoder1;
+
 
 public:
 	Robot() :
@@ -28,10 +36,11 @@ public:
 					   frontRightChannel, rearRightChannel),	// these must be initialized in the same order
 			stick(joystickChannel),								// as they are declared above.
 			gyro1(0),
-			gyro2(1),
 			accel(),
-			pot(3, 10, 0),
-			limitSwitch(0)
+			elevatorPot(elevatorPotChannel, 10, 0),
+			limitSwitch(3),
+			elevator(elevatorChannel),
+			encoder1(encoderChannelA, encoderChannelB)
 	{
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(RobotDrive::kFrontRightMotor, true);	// invert the left side motors
@@ -43,60 +52,103 @@ public:
 	 */
 	void OperatorControl()
 	{
-		float angle1, angle2, angle, xAxis, yAxis, zAxis;
+		const static float elevatorGap = 0.1;
+
+		float angle, xAxis, yAxis, zAxis;
 		float joy_atten;
 		double x, y, z, rotation;
 		bool lSwitch;
 		bool antinitrus;
+		bool gyroReset;
+		float testStop = 3.4;
+		float minStop, maxStop;
 
+		double encoderData;
+
+		//gyro1.InitGyro();
 		gyro1.Reset();
-		gyro2.Reset();
+		gyro1.SetSensitivity(0.0078);
 		gyro1.SetDeadband(0.005);
-		gyro2.SetDeadband(0.005);
+
 		robotDrive.SetSafetyEnabled(false);
+
+		elevator.Set(0.5);
+		minStop = testStop - elevatorGap;
+		maxStop = testStop + elevatorGap;
+
+		encoder1.Reset();
+		//encoder1.SetDistancePerPulse(1);
+
 
 		while (IsOperatorControl() && IsEnabled())
 		{
-			angle1 = gyro1.GetAngle();
-			angle2 = gyro2.GetAngle();
-			angle = (angle1 + angle2) / 2;
+			angle = gyro1.GetAngle();
 			x = accel.GetX();
 			y = accel.GetY();
 			z = accel.GetZ();
-			xAxis = stick.GetX() * joy_atten;
-			yAxis = stick.GetY() * joy_atten;
-			zAxis = stick.GetZ() * joy_atten;
-			rotation = pot.Get();
-			lSwitch = limitSwitch.Get();
+
+			encoderData = encoder1.GetRate();
+
+
+			//Gyro Reset Button
+			gyroReset = stick.GetRawButton(7);
+
+			if (gyroReset == true)
+			{
+				gyro1.Reset();
+			}
+
+			//Speed Reduction Button
 			antinitrus = stick.GetRawButton(8);
 
 			if (antinitrus == true)
 			{
 				//Sets speed to 0.5 power while holding button
 				joy_atten = 0.5;
-				xAxis = stick.GetX() * joy_atten;
-				yAxis = stick.GetY() * joy_atten;
-				zAxis = stick.GetZ() * joy_atten;
-
-				robotDrive.MecanumDrive_Cartesian(xAxis, yAxis, zAxis, angle);
 			}
 			else
+			{
 				joy_atten = 1;
+			}
+
+			xAxis = stick.GetX() * joy_atten;
+			yAxis = stick.GetY() * joy_atten;
+			zAxis = stick.GetZ() * joy_atten;
 
         	// Use the joystick X axis for lateral movement, Y axis for forward movement, and Z axis for rotation.
         	// This sample does not use field-oriented drive, so the gyro input is set to zero.
 			robotDrive.MecanumDrive_Cartesian(xAxis, yAxis, zAxis, angle);
-			SmartDashboard::PutNumber("Gyro1 ", angle1);
-			SmartDashboard::PutNumber("Gyro2 ", angle2);
-			SmartDashboard::PutNumber("Gyro Avg. ", angle);
+
+			//Elevator Potentiometer Speed
+			rotation = elevatorPot.Get();
+
+			if (rotation < minStop)
+			{
+				elevator.Set(0.1);
+			}
+			else if (rotation > maxStop)
+			{
+				elevator.Set(-0.1);
+			}
+			else
+			{
+				elevator.Set(0);
+			}
+
+			//lSwitch = limitSwitch.Get();
+
+			//Smart Dashboard Stuff
+			SmartDashboard::PutNumber("Gyro ", angle);
 			SmartDashboard::PutNumber("Accelerometer X ", x);
 			SmartDashboard::PutNumber("Accelerometer Y ", y);
 			SmartDashboard::PutNumber("Accelerometer Z ", z);
 			SmartDashboard::PutNumber("Potentiometer ", rotation);
 			SmartDashboard::PutBoolean("Limit Switch ", lSwitch);
-			SmartDashboard::PutNumber("X axis", xAxis);
-			SmartDashboard::PutNumber("Y axis", yAxis);
-			SmartDashboard::PutNumber("Z axis", zAxis);
+			SmartDashboard::PutNumber("X axis ", xAxis);
+			SmartDashboard::PutNumber("Y axis ", yAxis);
+			SmartDashboard::PutNumber("Z axis ", zAxis);
+			SmartDashboard::PutNumber("Encoder ", encoderData);
+
 			Wait(0.005); // wait 5ms to avoid hogging CPU cycles
 		}
 	}
