@@ -8,17 +8,21 @@ class Robot: public SampleRobot
 
     // Channels for the wheels
     const static int frontLeftChannel	= 2;
-    const static int rearLeftChannel	= 3;
-    const static int frontRightChannel	= 1;
+    const static int rearLeftChannel	= 4;
+    const static int frontRightChannel	= 6;
     const static int rearRightChannel	= 0;
 
-    const static int elevatorChannel = 4;
+    const static int elevatorChannel = 1;
     const static int elevatorPotChannel = 3;
 
     const static int joystickChannel	= 0;
 
-    const static int encoderChannelA = 0;
-    const static int encoderChannelB = 1;
+    const static int encoderChannelA1 = 0;
+    const static int encoderChannelB1 = 1;
+    const static int encoderChannelA2 = 2;
+    const static int encoderChannelB2 = 3;
+
+    const static int limitSwitchChannel = 9;
 
 	RobotDrive robotDrive;			// robot drive system
 	Joystick stick;					// only joystick
@@ -28,6 +32,7 @@ class Robot: public SampleRobot
 	DigitalInput limitSwitch; 		//limit switch
 	Talon elevator;
 	Encoder encoder1;
+	Encoder encoder2;
 
 
 public:
@@ -38,9 +43,10 @@ public:
 			gyro1(0),
 			accel(),
 			elevatorPot(elevatorPotChannel, 10, 0),
-			limitSwitch(3),
+			limitSwitch(limitSwitchChannel),
 			elevator(elevatorChannel),
-			encoder1(encoderChannelA, encoderChannelB)
+			encoder1(encoderChannelA1, encoderChannelB1),
+			encoder2(encoderChannelA2, encoderChannelB2)
 	{
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(RobotDrive::kFrontRightMotor, true);	// invert the left side motors
@@ -63,9 +69,9 @@ public:
 		float testStop = 3.4;
 		float minStop, maxStop;
 
-		double encoderData;
+		double encoderData1, encoderData2;
 
-		//gyro1.InitGyro();
+		gyro1.InitGyro();
 		gyro1.Reset();
 		gyro1.SetSensitivity(0.0078);
 		gyro1.SetDeadband(0.005);
@@ -77,6 +83,7 @@ public:
 		maxStop = testStop + elevatorGap;
 
 		encoder1.Reset();
+		encoder2.Reset();
 		//encoder1.SetDistancePerPulse(1);
 
 
@@ -87,7 +94,8 @@ public:
 			y = accel.GetY();
 			z = accel.GetZ();
 
-			encoderData = encoder1.GetRate();
+			encoderData1 = encoder1.GetRate();
+			encoderData2 = encoder2.GetRate();
 
 
 			//Gyro Reset Button
@@ -122,19 +130,27 @@ public:
 			//Elevator Potentiometer Speed
 			rotation = elevatorPot.Get();
 
-			if (rotation < minStop)
+			bool elevatorMotor;
+			elevatorMotor = stick.GetRawButton(1);
+
+			if (elevatorMotor == true)
+			{
+				elevator.Set(0.25);
+			}
+
+			/*if (rotation < minStop)
 			{
 				elevator.Set(0.1);
 			}
-			else if (rotation > maxStop)
+			//else if (rotation > maxStop)
 			{
 				elevator.Set(-0.1);
 			}
-			else
+			//else
 			{
 				elevator.Set(0);
 			}
-
+			 */
 			//lSwitch = limitSwitch.Get();
 
 			//Smart Dashboard Stuff
@@ -147,7 +163,8 @@ public:
 			SmartDashboard::PutNumber("X axis ", xAxis);
 			SmartDashboard::PutNumber("Y axis ", yAxis);
 			SmartDashboard::PutNumber("Z axis ", zAxis);
-			SmartDashboard::PutNumber("Encoder ", encoderData);
+			SmartDashboard::PutNumber("Encoder 1 ", encoderData1);
+			SmartDashboard::PutNumber("Encoder 2 ", encoderData2);
 
 			Wait(0.005); // wait 5ms to avoid hogging CPU cycles
 		}
