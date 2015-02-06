@@ -33,6 +33,7 @@ class Robot: public SampleRobot
 	Talon elevator;
 	Encoder encoder1;
 	Encoder encoder2;
+	PowerDistributionPanel power;
 
 
 public:
@@ -71,7 +72,7 @@ public:
 
 		double encoderData1, encoderData2;
 
-		gyro1.InitGyro();
+		//gyro1.InitGyro();
 		gyro1.Reset();
 		gyro1.SetSensitivity(0.0078);
 		gyro1.SetDeadband(0.005);
@@ -153,6 +154,10 @@ public:
 			 */
 			//lSwitch = limitSwitch.Get();
 
+			double rearRight;
+			rearRight = power.GetCurrent(0);
+
+
 			//Smart Dashboard Stuff
 			SmartDashboard::PutNumber("Gyro ", angle);
 			SmartDashboard::PutNumber("Accelerometer X ", x);
@@ -165,6 +170,7 @@ public:
 			SmartDashboard::PutNumber("Z axis ", zAxis);
 			SmartDashboard::PutNumber("Encoder 1 ", encoderData1);
 			SmartDashboard::PutNumber("Encoder 2 ", encoderData2);
+			SmartDashboard::PutNumber("Rear Right Drive ", rearRight);
 
 			Wait(0.005); // wait 5ms to avoid hogging CPU cycles
 		}
