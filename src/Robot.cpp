@@ -24,16 +24,19 @@ class Robot: public SampleRobot
 
     const static int limitSwitchChannel = 9;
 
+    float finalAngle;
+
 	RobotDrive robotDrive;			// robot drive system
 	Joystick stick;					// only joystick
-	Gyro gyro1;						//gyro 1
+	Gyro gyro;						//gyro 1
 	BuiltInAccelerometer accel;   	//built in accelerometer
 	AnalogPotentiometer elevatorPot; 		//potentiometer
 	DigitalInput limitSwitch; 		//limit switch
 	Talon elevator;
 	Encoder encoder1;
 	Encoder encoder2;
-	PowerDistributionPanel power;
+	PIDController pid;
+	//PowerDistributionPanel power;
 
 
 public:
@@ -41,13 +44,14 @@ public:
 			robotDrive(frontLeftChannel, rearLeftChannel,
 					   frontRightChannel, rearRightChannel),	// these must be initialized in the same order
 			stick(joystickChannel),								// as they are declared above.
-			gyro1(0),
+			gyro(0),
 			accel(),
 			elevatorPot(elevatorPotChannel, 10, 0),
 			limitSwitch(limitSwitchChannel),
 			elevator(elevatorChannel),
 			encoder1(encoderChannelA1, encoderChannelB1),
-			encoder2(encoderChannelA2, encoderChannelB2)
+			encoder2(encoderChannelA2, encoderChannelB2),
+			pid(0.05, 0, 0, (PIDSource *)&gyro, (PIDOutput *)&finalAngle)
 	{
 		robotDrive.SetExpiration(0.1);
 		robotDrive.SetInvertedMotor(RobotDrive::kFrontRightMotor, true);	// invert the left side motors
@@ -72,10 +76,10 @@ public:
 
 		double encoderData1, encoderData2;
 
-		//gyro1.InitGyro();
-		gyro1.Reset();
-		gyro1.SetSensitivity(0.0078);
-		gyro1.SetDeadband(0.005);
+		//gyro.InitGyro();
+		gyro.Reset();
+		gyro.SetSensitivity(0.0078);
+		gyro.SetDeadband(0.005);
 
 		robotDrive.SetSafetyEnabled(false);
 
@@ -90,7 +94,7 @@ public:
 
 		while (IsOperatorControl() && IsEnabled())
 		{
-			angle = gyro1.GetAngle();
+			angle = gyro.GetAngle();
 			x = accel.GetX();
 			y = accel.GetY();
 			z = accel.GetZ();
@@ -104,7 +108,7 @@ public:
 
 			if (gyroReset == true)
 			{
-				gyro1.Reset();
+				gyro.Reset();
 			}
 
 			//Speed Reduction Button
@@ -126,7 +130,7 @@ public:
 
         	// Use the joystick X axis for lateral movement, Y axis for forward movement, and Z axis for rotation.
         	// This sample does not use field-oriented drive, so the gyro input is set to zero.
-			robotDrive.MecanumDrive_Cartesian(xAxis, yAxis, zAxis, angle);
+			robotDrive.MecanumDrive_Cartesian(xAxis, yAxis, finalAngle, angle);
 
 			//Elevator Potentiometer Speed
 			rotation = elevatorPot.Get();
@@ -154,12 +158,34 @@ public:
 			 */
 			//lSwitch = limitSwitch.Get();
 
-			double rearRight;
-			rearRight = power.GetCurrent(0);
+			//double rearRight;
+			//rearRight = power.GetCurrent(0);
+
+			//PID Crap
+			float setpointAngle;
+
+			pid.Enable();
+
+
+			if(zAxis != 0)
+			{
+				pid.Disable();
+				setpointAngle = 6669;
+				finalAngle = zAxis;
+			}
+
+
+			if(zAxis == 0 && setpointAngle == 6669)
+			{
+				setpointAngle = gyro.GetAngle();
+			}
+
+			pid.SetSetpoint(setpointAngle);
+			//pid.PIDController(.05, 0, 0, angle, finalAngle);
 
 
 			//Smart Dashboard Stuff
-			SmartDashboard::PutNumber("Gyro ", angle);
+			SmartDashboard::PutNumber("Gyro ", finalAngle);
 			SmartDashboard::PutNumber("Accelerometer X ", x);
 			SmartDashboard::PutNumber("Accelerometer Y ", y);
 			SmartDashboard::PutNumber("Accelerometer Z ", z);
@@ -170,7 +196,7 @@ public:
 			SmartDashboard::PutNumber("Z axis ", zAxis);
 			SmartDashboard::PutNumber("Encoder 1 ", encoderData1);
 			SmartDashboard::PutNumber("Encoder 2 ", encoderData2);
-			SmartDashboard::PutNumber("Rear Right Drive ", rearRight);
+			//SmartDashboard::PutNumber("Rear Right Drive ", rearRight);
 
 			Wait(0.005); // wait 5ms to avoid hogging CPU cycles
 		}
